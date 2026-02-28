@@ -1,28 +1,38 @@
-name: V103 Slim-Stealth Engine
-
+name: PRAVEER.OWNS CRON-MACHINE V103
 on:
-  workflow_dispatch:
+  schedule:
+    # 🕒 Fires every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allows manual start
 
 jobs:
-  strike:
+  flood:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        machine_id: [1, 2, 3, 4, 5]
-    runs-on: ubuntu-latest
-    timeout-minutes: 360 # 🕒 Allows the strike to run for 6 hours
+        machine: [1, 2] # 2 Machines = 8 Agents total
     
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
-      - name: Dependencies
-        run: pip install selenium selenium-stealth undetected-chromedriver
-      - name: Strike
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: pip install selenium selenium-stealth
+
+      - name: Setup Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
+      - name: Run Quad-Agent Flood
         env:
           INSTA_COOKIE: ${{ secrets.INSTA_COOKIE }}
           TARGET_THREAD_ID: ${{ secrets.TARGET_THREAD_ID }}
+          TARGET_NAME: ${{ secrets.TARGET_NAME }}
           MESSAGES: ${{ secrets.MESSAGES }}
-          MACHINE_ID: ${{ matrix.machine_id }}
-        run: python -u praveer_v103.py
+        run: python praveer_v103.py
