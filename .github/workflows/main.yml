@@ -1,4 +1,4 @@
-name: Titan Browser Engine
+name: V109 Triple-Tap Engine
 
 on:
   workflow_dispatch:
@@ -8,18 +8,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install Playwright
+      - name: Install Strike Dependencies
         run: |
-          pip install playwright
-          playwright install chromium --with-deps
+          pip install selenium selenium-stealth
 
-      - name: Run Titan Engine
+      - name: Run V109 Engine
         env:
           INSTA_COOKIE: ${{ secrets.INSTA_COOKIE }}
+          TARGET_THREAD_ID: ${{ secrets.TARGET_THREAD_ID }}
           MESSAGES: ${{ secrets.MESSAGES }}
-        run: python -u praveer_v109s.py
+          MACHINE_ID: "1"
+        run: python -u your_script_name.py # Change this to your filename
