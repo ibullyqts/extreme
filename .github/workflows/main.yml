@@ -1,9 +1,8 @@
-name: PRAVEER.OWNS API-TITAN-SECURE
+name: PRAVEER.OWNS API-TITAN-FINAL
 on:
   schedule:
-    # Trigger every 6 hours
     - cron: '0 */6 * * *'
-  workflow_dispatch: # Allows manual start
+  workflow_dispatch:
 
 jobs:
   api-strike:
@@ -11,7 +10,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Spins up 3 machines (Total 24 API Agents)
         machine: [1, 2, 3]
     steps:
       - name: Checkout Code
@@ -22,14 +20,14 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Axios
-        run: npm install axios
+      - name: Install Dependencies
+        # 🔥 Added 'qs' here to fix the 404/Data format issue
+        run: npm install axios qs 
 
-      - name: Start Secure API Flood
+      - name: Start Final API Strike
         env:
           INSTA_COOKIE: ${{ secrets.INSTA_COOKIE }}
           TARGET_THREAD_ID: ${{ secrets.TARGET_THREAD_ID }}
           MESSAGES: ${{ secrets.MESSAGES }}
           MACHINE_ID: ${{ matrix.machine }}
-        # Ensure your file is named praveer_v109s.js in your repo
         run: node praveer_v109s.js
