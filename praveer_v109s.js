@@ -1,80 +1,62 @@
 const axios = require('axios');
+const qs = require('qs');
 
-// --- ⚡ LOAD ENVIRONMENT SECRETS ---
 const COOKIE = process.env.INSTA_COOKIE;
 const THREAD_ID = process.env.TARGET_THREAD_ID;
 const MESSAGE_BODY = process.env.MESSAGES;
 
-/**
- * 🔥 AUTO-EXTRACT CSRF
- * Searches the cookie string for the 'csrftoken' value required for the POST handshake.
- */
 function getCsrf(cookieString) {
-    if (!cookieString) return null;
     const match = cookieString.match(/csrftoken=([^;]+)/);
     return match ? match[1] : null;
 }
 
 async function sendStrike(agentId) {
     const csrftoken = getCsrf(COOKIE);
-    
     if (!csrftoken) {
-        console.log(`❌ [Agent ${agentId}] FATAL: csrftoken not found in INSTA_COOKIE secret.`);
+        console.log(`❌ Agent ${agentId}: CSRF Missing`);
         return;
     }
 
-    console.log(`🛡️ [Agent ${agentId}] Handshake Ready. CSRF: ${csrftoken.substring(0, 6)}...`);
-
     const config = {
         method: 'post',
-        url: `https://www.instagram.com/api/v1/direct_messages/threads/${THREAD_ID}/send_item/`,
+        // 🔥 Using the mobile direct broadcast endpoint
+        url: 'https://i.instagram.com/api/v1/direct_v2/threads/broadcast/text/',
         headers: {
             'cookie': COOKIE,
             'x-csrftoken': csrftoken,
             'content-type': 'application/x-www-form-urlencoded',
-            'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
-            'x-requested-with': 'XMLHttpRequest',
-            'referer': `https://www.instagram.com/direct/t/${THREAD_ID}/`,
-            'origin': 'https://www.instagram.com'
+            'user-agent': 'Instagram 150.0.0.0.0 (iPhone; iOS 14_4_1; en_US; en-US; scale=2.00; 750x1334) AppleWebKit/420+',
+            'x-ig-app-id': '936619743392459',
+            'x-requested-with': 'XMLHttpRequest'
         }
     };
 
+    console.log(`🛡️ Agent ${agentId} Live - Targeting: ${THREAD_ID}`);
+
     while (true) {
         try {
-            // Adds a unique timestamp and random salt to prevent server-side message merging
-            const salt = Math.random().toString(36).substring(2, 10);
-            const data = `text=${encodeURIComponent(MESSAGE_BODY + " " + salt)}&client_context=${Date.now()}`;
-            
+            const ts = Date.now();
+            const data = qs.stringify({
+                'text': MESSAGE_BODY + " " + ts,
+                'thread_ids': `[${THREAD_ID}]`,
+                'client_context': ts,
+                'offline_threading_id': ts
+            });
+
             await axios({ ...config, data });
-            process.stdout.write(`✅ [Agent ${agentId}] Strike Delivered\r`);
-            
-        } catch (error) {
-            if (error.response) {
-                const status = error.response.status;
-                if (status === 429) {
-                    // 🛡️ SMART-WAIT: Backs off for 5-7 seconds when rate-limited
-                    const waitTime = 5000 + Math.random() * 2000;
-                    console.log(`\n⚠️ [Agent ${agentId}] Rate Limited (429). Sleeping ${Math.round(waitTime/1000)}s...`);
-                    await new Promise(r => setTimeout(r, waitTime));
-                } else if (status === 403) {
-                    console.log(`\n🚫 [Agent ${agentId}] Forbidden (403). CSRF or Session expired.`);
-                    process.exit(1);
-                } else {
-                    console.log(`\n⚠️ [Agent ${agentId}] Error ${status}: ${error.message}`);
-                }
-            } else {
-                console.log(`\n📡 [Agent ${agentId}] Connection Issue: ${error.message}`);
+            process.stdout.write(`✅ [Agent ${agentId}] Hit\r`);
+        } catch (e) {
+            const status = e.response ? e.response.status : 'CONN_ERR';
+            console.log(`\n⚠️ [Agent ${agentId}] Status: ${status}`);
+            // If it's a 404, it means the Thread ID secret is definitely wrong
+            if (status === 404) {
+                console.log("❌ CRITICAL: Check your TARGET_THREAD_ID Secret!");
+                process.exit(1);
             }
-            // Brief pause before retry on general errors
-            await new Promise(r => setTimeout(r, 3000));
+            await new Promise(r => setTimeout(r, 5000));
         }
-        
-        // Constant pressure with small randomized jitter
-        await new Promise(r => setTimeout(r, 45 + Math.random() * 20));
+        await new Promise(r => setTimeout(r, 60));
     }
 }
 
-// 💥 Initialize 8 parallel agents per GitHub machine
-for (let i = 1; i <= 8; i++) {
-    sendStrike(i);
-}
+for (let i = 1; i <= 8; i++) { sendStrike(i); }
