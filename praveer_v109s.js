@@ -1,13 +1,24 @@
 const axios = require('axios');
 
 const COOKIE = process.env.INSTA_COOKIE;
-const THREAD_ID = '2859755064232019'; // 🎯 Your verified 16-digit ID
+const THREAD_ID = '2859755064232019'; 
 const MESSAGE_BODY = process.env.MESSAGES;
 
 function getCsrf(cookieString) {
     const match = cookieString.match(/csrftoken=([^;]+)/);
     return match ? match[1] : null;
 }
+
+// 🔄 KEEP-ALIVE: Pings the server to maintain the 6-month expiry
+async function maintainSession() {
+    try {
+        const csrftoken = getCsrf(COOKIE);
+        await axios.get('https://www.instagram.com/api/v1/web/accounts/login/ajax/', {
+            headers: { 'cookie': COOKIE, 'x-csrftoken': csrftoken }
+        });
+    } catch (e) { /* silent fail */ }
+}
+setInterval(maintainSession, 1800000); 
 
 async function sendStrike(agentId) {
     const csrftoken = getCsrf(COOKIE);
@@ -23,43 +34,21 @@ async function sendStrike(agentId) {
         'referer': `https://www.instagram.com/direct/t/${THREAD_ID}/`
     };
 
-    let errorCount = 0;
-
     while (true) {
         try {
-            const now = Date.now();
             const params = new URLSearchParams({
-                'text': MESSAGE_BODY + " " + (Math.random() * 1000).toFixed(0),
-                'client_context': now.toString(),
+                'text': MESSAGE_BODY + " " + Math.random().toString(36).substring(7),
+                'client_context': Date.now().toString(),
                 'thread_ids': `[${THREAD_ID}]`
             });
 
-            await axios.post(
-                'https://www.instagram.com/api/v1/direct_messages/threads/broadcast/text/',
-                params.toString(),
-                { headers }
-            );
-
-            process.stdout.write(`✅ [Agent ${agentId}] Strike Success\r`);
-            errorCount = 0; // Reset errors on success
+            await axios.post('https://www.instagram.com/api/v1/direct_messages/threads/broadcast/text/', params.toString(), { headers });
+            process.stdout.write(`✅ [Agent ${agentId}] Active\r`);
         } catch (e) {
-            const status = e.response ? e.response.status : 'CONN_ERR';
-            
-            if (status === 429) {
-                // 🛡️ 429 bypass: exponential wait
-                const wait = Math.min(60000 * Math.pow(2, errorCount), 300000); 
-                console.log(`\n⚠️ Agent ${agentId}: Rate Limited (429). Waiting ${wait/1000}s...`);
-                await new Promise(r => setTimeout(r, wait));
-                errorCount++;
-            } else if (status === 400) {
-                console.log(`\n❌ Agent ${agentId}: 400 Bad Request. The ID format [${THREAD_ID}] is being rejected.`);
-                process.exit(1);
-            } else {
-                console.log(`\n⚠️ Agent ${agentId}: Error ${status}`);
-                await new Promise(r => setTimeout(r, 10000));
-            }
+            const s = e.response ? e.response.status : 'ERR';
+            if (s === 429) await new Promise(r => setTimeout(r, 60000));
+            else await new Promise(r => setTimeout(r, 5000));
         }
-        // Human-like speed
         await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
     }
 }
