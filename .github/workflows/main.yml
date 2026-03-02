@@ -1,38 +1,41 @@
-name: PRAVEER.OWNS INFINITE-VELOCITY V124
+name: Phoenix V100 Ultra-Matrix (40-Agent)
+
 on:
+  workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *' # Runs every 6 hours
-  workflow_dispatch: 
+    - cron: '0 */3 * * *' # Auto-restarts every 3 hours
 
 jobs:
-  flood:
-    runs-on: ubuntu-latest
-    timeout-minutes: 350
+  ultra-strike:
     strategy:
       matrix:
-        # 4 Machines x 4 Agents = 16 Agents Total
-        machine: [1, 2, 3, 4] 
+        # 🚀 Spawning 20 separate machines simultaneously
+        machine_id: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
     
+    runs-on: ubuntu-latest
+    timeout-minutes: 360 
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
 
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
-          pip install selenium selenium-stealth webdriver-manager
+    - name: Install Dependencies
+      run: pip install selenium==4.21.0 selenium-stealth
 
-      - name: Run Vortex Engine
-        env:
-          INSTA_COOKIE: ${{ secrets.INSTA_COOKIE }}
-          TARGET_THREAD_ID: ${{ secrets.TARGET_THREAD_ID }}
-          MESSAGES: ${{ secrets.MESSAGES }}
-          MACHINE_ID: ${{ matrix.machine }}
-        # -u ensures real-time logs so GitHub doesn't throttle the process
-        run: python -u praveer_v124.py
+    - name: 🔥 Run Ultra-Machine ${{ matrix.machine_id }}
+      env:
+        INSTA_COOKIE: ${{ secrets.INSTA_COOKIE }}
+        TARGET_THREAD_ID: ${{ secrets.TARGET_THREAD_ID }}
+        MESSAGES: ${{ secrets.MESSAGES }}
+        MACHINE_ID: ${{ matrix.machine_id }}
+      run: |
+        while true; do
+          python -u main.py
+          echo "⚠️ Machine ${{ matrix.machine_id }} Respawning..."
+          sleep 5
+        done
